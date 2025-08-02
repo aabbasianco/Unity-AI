@@ -13,12 +13,12 @@ public class NpcController : MonoBehaviour
 
     [Header("NPC Settings")]
     public Transform[] patrolPoints;
-    public Transform target; // مثلاً بازیکن
+    public Transform target;
     private int patrolIndex = 0;
 
     [Header("Components")]
-    public NavMeshAgent agent;
-    public Animator animator;
+    [HideInInspector] public NavMeshAgent agent;
+    [HideInInspector] public Animator animator;
 
     private void Awake()
     {
