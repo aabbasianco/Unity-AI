@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using UnityEngine;
 
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
@@ -26,19 +27,52 @@ public class PlayerController : MonoBehaviour
     float moveX;
     float moveZ;
 
+    private int currentIdle = 0;
+
     void Start()
     {
         controller = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
         Cursor.lockState = CursorLockMode.Locked; // Lock mouse
         //ChangeAnimation("Walk Backwards");
-        ChangeAnimation("Rig|Idle_Loop");
+        ChangeAnimation("Idle 1");
+
+        StartCoroutine(ChangeIdle());
     }
+
+    IEnumerator ChangeIdle()
+    {
+        while (true)
+        {
+            // Wait until the current idle animation finishes
+            yield return new WaitUntil(() =>
+                animator.GetCurrentAnimatorStateInfo(0).normalizedTime >= 1f
+                && animator.GetCurrentAnimatorStateInfo(0).IsName(currentAnimation));
+
+            // Switch to next idle
+            ++currentIdle;
+            if (currentIdle >= 3)
+                currentIdle = 0;
+
+            // Change idle animation
+            CheckIdle();
+
+            // Wait a little (optional delay between idles)
+            yield return new WaitForSeconds(0.2f);
+        }
+    }
+
 
     void Update()
     {
         HandleMovement();
         HandleMouseLook();
+
+        if (isGrounded && Input.GetKeyDown(KeyCode.Mouse0))
+        {
+            ChangeAnimation("Rig|Punch_Cross");
+        }
+
         CheckAnimation();
     }
 
@@ -58,7 +92,10 @@ public class PlayerController : MonoBehaviour
 
         // --- Jump ---
         if (Input.GetButtonDown("Jump") && isGrounded)
+        {
             velocity.y = Mathf.Sqrt(jumpForce * -2f * gravity);
+            ChangeAnimation("Rig|Jump_Start");
+        }
 
         // --- Gravity ---
         velocity.y += gravity * Time.deltaTime;
@@ -80,17 +117,43 @@ public class PlayerController : MonoBehaviour
         cameraTransform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
     }
 
-    private void ChangeAnimation(string _animation, float _crossFade = .2f)
+    public void ChangeAnimation(string _animation, float _crossFade = .1f, float _time = 0f)
     {
-        if (currentAnimation != _animation)
+        if (_time > 0) StartCoroutine(Wait());
+        else Validate();
+
+        IEnumerator Wait()
         {
-            currentAnimation = _animation;
-            animator.CrossFade(_animation, _crossFade);
+            yield return new WaitForSeconds(_time - _crossFade);
+            Validate();
+        }
+
+        void Validate()
+        {
+            if (currentAnimation != _animation)
+            {
+                currentAnimation = _animation;
+
+                if (currentAnimation == "")
+                    CheckAnimation();
+                else
+                    animator.CrossFade(_animation, _crossFade);
+            }
         }
     }
 
     private void CheckAnimation()
     {
+        if (currentAnimation == "Rig|Jump_Start" || currentAnimation == "Rig|Punch_Cross" || currentAnimation == "Rig|Jump_Land")
+            return;
+        if (currentAnimation == "Rig|Jump_Loop")
+        {
+            if (isGrounded)
+                ChangeAnimation("Rig|Jump_Land");
+
+            return;
+        }
+
         if (moveZ > 0.1f) // حرکت به جلو
         {
             ChangeAnimation("Rig|Walk_Loop");
@@ -101,7 +164,25 @@ public class PlayerController : MonoBehaviour
         }
         else // ایستادن
         {
-            ChangeAnimation("Rig|Idle_Loop");
+            CheckIdle();
+        }
+    }
+
+    void CheckIdle()
+    {
+        switch (currentIdle)
+        {
+            case 0:
+                ChangeAnimation("Idle 1");
+                break;
+            case 1:
+                ChangeAnimation("Idle 2");
+                break;
+            case 2:
+                ChangeAnimation("Idle 3");
+                break;
+            default:
+                break;
         }
     }
 
