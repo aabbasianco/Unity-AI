@@ -2,7 +2,7 @@
 using UnityEngine;
 
 [RequireComponent(typeof(CharacterController))]
-public class PlayerController : MonoBehaviour
+public class PlayerController : AnimatorBrain
 {
     [Header("Movement Settings")]
     public float movementSpeed = 5f;
