@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public class AnimatorBrain : MonoBehaviour
@@ -24,6 +25,51 @@ public class AnimatorBrain : MonoBehaviour
         Animator.StringToHash("Pistol Reload"),
         Animator.StringToHash("None")
     };
+
+    private Animator animator;
+    private Animations[] currentAnimation;
+    private bool[] layerLocked;
+    private Action<int> DefaultAnimation;
+
+    protected void Initialize(int _layers, Animations _startingAnimation, Animator _animator, Action<int> _DefaultAnimation)
+    {
+        layerLocked = new bool[_layers];
+        currentAnimation = new Animations[_layers];
+        this.animator = _animator;
+        this.DefaultAnimation = _DefaultAnimation;
+        for (int i = 0; i < _layers; i++)
+        {
+            layerLocked[i] = false;
+            currentAnimation[i] = _startingAnimation;
+        }
+    }
+
+    public Animations GetCurrentAnimations(int _layer)
+    {
+        return currentAnimation[_layer];
+    }
+
+    public void SetLocked(bool _lockLayer, int _layer)
+    {
+        layerLocked[_layer] = _lockLayer;
+    }
+
+    public void play(Animations _animation, int _layer, bool _lockLayer, bool _bypassLock, float _crossFade = .2f)
+    {
+        if (_animation == Animations.NONE)
+        {
+            DefaultAnimation(_layer);
+            return;
+        }
+
+        if (layerLocked[_layer] && !_bypassLock) return;
+        layerLocked[_layer] = _lockLayer;
+
+        if (currentAnimation[_layer] == _animation) return;
+
+        currentAnimation[_layer] = _animation;
+        animator.CrossFade(animations[(int)currentAnimation[_layer]], _crossFade, _layer);
+    }
 }
 
 public enum Animations

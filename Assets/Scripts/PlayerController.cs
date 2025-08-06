@@ -29,8 +29,13 @@ public class PlayerController : AnimatorBrain
 
     private int currentIdle = 0;
 
+    private const int UPPERBODY = 0;
+    private const int LOWERBODY = 1;
+
     void Start()
     {
+        Initialize(GetComponent<Animator>().layerCount, Animations.IDLE1, GetComponent<Animator>(), DefaultAnimation);
+
         controller = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
         Cursor.lockState = CursorLockMode.Locked;
@@ -82,4 +87,18 @@ public class PlayerController : AnimatorBrain
         cameraTransform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
     }
 
+    private void CheckTopAnimation()
+    {
+
+    }
+
+    private void CheckBottomAnimation()
+    {
+
+    }
+
+    void DefaultAnimation(int _layer)
+    {
+
+    }
 }
