@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using UnityEngine;
+﻿using UnityEngine;
 
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : AnimatorBrain
@@ -13,7 +12,7 @@ public class PlayerController : AnimatorBrain
     [Header("References")]
     public Transform cameraTransform;
     public LayerMask groundMask;
-    public float groundCheckDistance = 0.2f;
+    public float groundCheckDistance = 0.3f;
 
     private CharacterController controller;
     private Vector3 velocity;
@@ -21,23 +20,21 @@ public class PlayerController : AnimatorBrain
 
     private float xRotation = 0f;
 
-    private string currentAnimation = "";
     private Animator animator;
 
-    float moveX;
-    float moveZ;
-
-    private int currentIdle = 0;
+    private float moveX;
+    private float moveZ;
 
     private const int UPPERBODY = 0;
     private const int LOWERBODY = 1;
 
     void Start()
     {
-        Initialize(GetComponent<Animator>().layerCount, Animations.IDLE1, GetComponent<Animator>(), DefaultAnimation);
-
         controller = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
+
+        Initialize(animator.layerCount, Animations.IDLE1, animator, DefaultAnimation);
+
         Cursor.lockState = CursorLockMode.Locked;
     }
 
@@ -45,20 +42,27 @@ public class PlayerController : AnimatorBrain
     {
         HandleMovement();
         HandleMouseLook();
+
+        CheckTopAnimation();
+        CheckBottomAnimation();
     }
 
     void HandleMovement()
     {
-        // --- Ground check ---
-        isGrounded = Physics.CheckSphere(transform.position + Vector3.down * (controller.height / 2), groundCheckDistance, groundMask);
-        if (isGrounded && velocity.y < 0)
-            velocity.y = -2f;
+        // --- Ground Check ---
+        Vector3 spherePosition = transform.position + Vector3.down * (controller.height / 2 - controller.skinWidth + 0.05f);
+        isGrounded = Physics.CheckSphere(spherePosition, groundCheckDistance, groundMask);
 
-        // --- Keyboard movement ---
+        if (isGrounded && velocity.y < 0)
+        {
+            velocity.y = -2f; // Keeps character grounded
+        }
+
+        // --- Input Movement ---
         moveX = Input.GetAxis("Horizontal");
         moveZ = Input.GetAxis("Vertical");
 
-        Vector3 move = transform.right * moveX + transform.forward * moveZ;
+        Vector3 move = (transform.right * moveX + transform.forward * moveZ).normalized;
         controller.Move(move * movementSpeed * Time.deltaTime);
 
         // --- Jump ---
@@ -67,9 +71,12 @@ public class PlayerController : AnimatorBrain
             velocity.y = Mathf.Sqrt(jumpForce * -2f * gravity);
         }
 
-        // --- Gravity ---
+        // --- Apply Gravity ---
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
+
+        // --- Update Animations ---
+        CheckMovementAnimations(LOWERBODY);
     }
 
     void HandleMouseLook()
@@ -77,28 +84,56 @@ public class PlayerController : AnimatorBrain
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
 
-        // Rotate player horizontally
+        // Horizontal rotation
         transform.Rotate(Vector3.up * mouseX);
 
-        // Rotate camera vertically
+        // Vertical rotation
         xRotation -= mouseY;
         xRotation = Mathf.Clamp(xRotation, -90f, 90f);
-
         cameraTransform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+
+        // Update top-layer animations if needed
+        //CheckTopAnimation();
     }
 
     private void CheckTopAnimation()
     {
-
+        CheckMovementAnimations(UPPERBODY);
     }
 
     private void CheckBottomAnimation()
     {
+        CheckMovementAnimations(LOWERBODY);
+    }
 
+    private void CheckMovementAnimations(int _layer)
+    {
+        Vector3 movement = new Vector3(moveX, 0f, moveZ).normalized;
+
+        if (!isGrounded)
+        {
+            Play(Animations.JUMPAIR, _layer, false, false);
+        }
+        else if (movement.magnitude > 0f)
+        {
+            if (moveZ > 0)
+                Play(Animations.WALKFWD, _layer, false, false);
+            else if (moveZ < 0)
+                Play(Animations.WALKBWD, _layer, false, false);
+            else if (moveX > 0)
+                Play(Animations.WALKRIGHT, _layer, false, false);
+            else if (moveX < 0)
+                Play(Animations.WALKLEFT, _layer, false, false);
+        }
+        else
+        {
+            Play(Animations.IDLE1, _layer, false, false);
+        }
     }
 
     void DefaultAnimation(int _layer)
     {
-
+        if (_layer == UPPERBODY) CheckTopAnimation();
+        else CheckBottomAnimation();
     }
 }

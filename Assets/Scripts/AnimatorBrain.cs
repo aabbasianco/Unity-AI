@@ -10,6 +10,8 @@ public class AnimatorBrain : MonoBehaviour
         Animator.StringToHash("Idle 3"),
         Animator.StringToHash("Walk Forward"),
         Animator.StringToHash("Walk Backward"),
+        Animator.StringToHash("Walk Left"),
+        Animator.StringToHash("Walk Right"),
         Animator.StringToHash("Run Forward"),
         Animator.StringToHash("Run Backward"),
         Animator.StringToHash("Jump Start"),
@@ -54,7 +56,7 @@ public class AnimatorBrain : MonoBehaviour
         layerLocked[_layer] = _lockLayer;
     }
 
-    public void play(Animations _animation, int _layer, bool _lockLayer, bool _bypassLock, float _crossFade = .2f)
+    public void Play(Animations _animation, int _layer, bool _lockLayer, bool _bypassLock, float _crossFade = .1f)
     {
         if (_animation == Animations.NONE)
         {
@@ -79,6 +81,8 @@ public enum Animations
     IDLE3,
     WALKFWD,
     WALKBWD,
+    WALKLEFT,
+    WALKRIGHT,
     RUNFWD,
     RUNBWD,
     JUMPSTART,
