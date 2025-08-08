@@ -209,6 +209,11 @@ MonoBehaviour:
   mouseSensitivity: 10
   jumpForce: 5
   gravity: -9.81
+  defaultTransitionTime: 0.2
+  sameAxisTransitionTime: 0.3
+  crossAxisTransitionTime: 0.1
+  idleToMovementTime: 0.15
+  movementToIdleTime: 0.25
   cameraTransform: {fileID: 1519522172}
   groundMask:
     serializedVersion: 2
