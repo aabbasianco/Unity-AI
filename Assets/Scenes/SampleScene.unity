@@ -205,7 +205,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dc9435bea99df6e4d890f98edfb28f5e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  movementSpeed: 4
+  movementSpeed: 2
   mouseSensitivity: 10
   jumpForce: 5
   gravity: -9.81
@@ -214,6 +214,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 8
   groundCheckDistance: 0.2
+  shooting: 0
+  jumping: 0
 --- !u!64 &188824991
 MeshCollider:
   m_ObjectHideFlags: 0

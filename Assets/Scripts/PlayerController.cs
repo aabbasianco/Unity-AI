@@ -58,110 +58,16 @@ public class PlayerController : AnimatorBrain
         StartCoroutine(ChangeIdle());
     }
 
-    // --- New ChangeIdle: waits until the current idle animation completes (one full cycle) ---
     IEnumerator ChangeIdle()
     {
         while (true)
         {
-            // Play the current idle (ensures animator is in that state)
-            Play(idleAnimations[currentIdle], LOWERBODY, false, false, .1f);
-
-            // obtain the target state's shortNameHash
-            int targetHash = Animator.StringToHash(GetAnimName(idleAnimations[currentIdle]));
-
-            // --- wait until the animator actually transitions into that state (current or next) ---
-            bool targetEntered = false;
-            while (!targetEntered)
+            yield return new WaitForSeconds(2);
+            ++currentIdle;
+            if (currentIdle >= idleAnimations.Length)
             {
-                if (animator == null) yield break;
-
-                var current = animator.GetCurrentAnimatorStateInfo(LOWERBODY);
-                var next = animator.GetNextAnimatorStateInfo(LOWERBODY);
-
-                if (current.shortNameHash == targetHash || next.shortNameHash == targetHash)
-                {
-                    targetEntered = true;
-                    break;
-                }
-
-                yield return null;
+                currentIdle = 0;
             }
-
-            // --- now wait until that state's normalizedTime >= 1 (one full cycle) ---
-            bool finished = false;
-            while (!finished)
-            {
-                if (animator == null) yield break;
-
-                var current = animator.GetCurrentAnimatorStateInfo(LOWERBODY);
-                var next = animator.GetNextAnimatorStateInfo(LOWERBODY);
-
-                // if target is in 'next' (during transition / about to be current)
-                if (next.shortNameHash == targetHash)
-                {
-                    // wait until next.normalizedTime >= 1 (one full loop)
-                    if (next.normalizedTime >= 1f)
-                    {
-                        finished = true;
-                        break;
-                    }
-                }
-                // if target is already the current state
-                else if (current.shortNameHash == targetHash)
-                {
-                    if (current.normalizedTime >= 1f)
-                    {
-                        finished = true;
-                        break;
-                    }
-                }
-                else
-                {
-                    // target no longer active (got interrupted by another animation) -> restart waiting
-                    break;
-                }
-
-                yield return null;
-            }
-
-            if (finished)
-            {
-                // advance to next idle only if we actually finished the clip
-                ++currentIdle;
-                if (currentIdle >= idleAnimations.Length) currentIdle = 0;
-            }
-            else
-            {
-                // interrupted: don't advance currentIdle, just loop and wait again
-            }
-
-            // small yield to avoid tight-looping before next Play call
-            yield return null;
-        }
-    }
-
-    // helper to map Animations enum to animator state names (must match your Animator states)
-    private string GetAnimName(Animations a)
-    {
-        switch (a)
-        {
-            case Animations.IDLE1: return "Idle 1";
-            case Animations.IDLE2: return "Idle 2";
-            case Animations.IDLE3: return "Idle 3";
-            case Animations.WALKFWD: return "Walk Forward";
-            case Animations.WALKBWD: return "Walk Backward";
-            case Animations.WALKLEFT: return "Walk Left";
-            case Animations.WALKRIGHT: return "Walk Right";
-            case Animations.RUNFWD: return "Run Forward";
-            case Animations.RUNBWD: return "Run Backward";
-            case Animations.JUMPSTART: return "Jump Start";
-            case Animations.JUMPAIR: return "Jump Air";
-            case Animations.JUMPLAND: return "Jump Land";
-            case Animations.PISTOLSHOOT: return "Pistol Shoot";
-            case Animations.PISTOLRELOAD: return "Pistol Reload";
-            case Animations.DEATH: return "Death";
-            // add other mappings as needed
-            default: return a.ToString();
         }
     }
 
@@ -193,7 +99,9 @@ public class PlayerController : AnimatorBrain
         if (!jumping && grounded && Input.GetKeyDown(KeyCode.Space))
         {
             Play(Animations.JUMPSTART, LOWERBODY, true, false);
+            //rb.AddForce(jumpForce * Vector3.up, ForceMode.Impulse);
             jumping = true;
+            //jump sound
         }
     }
 
@@ -230,6 +138,9 @@ public class PlayerController : AnimatorBrain
         // --- Apply Gravity ---
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
+
+        // --- Update Animations ---
+        //CheckMovementAnimations(LOWERBODY);
     }
 
     void HandleMouseLook()
@@ -244,6 +155,9 @@ public class PlayerController : AnimatorBrain
         xRotation -= mouseY;
         xRotation = Mathf.Clamp(xRotation, -90f, 90f);
         cameraTransform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+
+        // Update top-layer animations if needed
+        //CheckTopAnimation();
     }
 
     private void CheckTopAnimation()
@@ -290,14 +204,5 @@ public class PlayerController : AnimatorBrain
     {
         if (_layer == UPPERBODY) CheckTopAnimation();
         else CheckBottomAnimation();
-    }
-
-    // optional: draw ground-check sphere in scene view for debugging
-    private void OnDrawGizmosSelected()
-    {
-        if (controller == null) return;
-        Gizmos.color = grounded ? Color.green : Color.red;
-        Vector3 spherePosition = transform.position + Vector3.down * (controller.height / 2 - controller.skinWidth + 0.05f);
-        Gizmos.DrawWireSphere(spherePosition, groundCheckDistance);
     }
 }
