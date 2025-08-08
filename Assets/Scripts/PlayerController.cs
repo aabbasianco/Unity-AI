@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using UnityEngine;
 
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : AnimatorBrain
@@ -25,8 +26,16 @@ public class PlayerController : AnimatorBrain
     private float moveX;
     private float moveZ;
 
+    private int currentIdle = 0;
     private const int UPPERBODY = 0;
     private const int LOWERBODY = 1;
+
+    private readonly Animations[] idleAnimations =
+    {
+        Animations.IDLE1,
+        Animations.IDLE2,
+        Animations.IDLE3
+    };
 
     void Start()
     {
@@ -36,6 +45,22 @@ public class PlayerController : AnimatorBrain
         Initialize(animator.layerCount, Animations.IDLE1, animator, DefaultAnimation);
 
         Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+
+        StartCoroutine(ChangeIdle());
+
+        IEnumerator ChangeIdle()
+        {
+            while (true)
+            {
+                yield return new WaitForSeconds(2);
+                ++currentIdle;
+                if (currentIdle >= idleAnimations.Length)
+                {
+                    currentIdle = 0;
+                }
+            }
+        }
     }
 
     void Update()
@@ -76,7 +101,7 @@ public class PlayerController : AnimatorBrain
         controller.Move(velocity * Time.deltaTime);
 
         // --- Update Animations ---
-        CheckMovementAnimations(LOWERBODY);
+        //CheckMovementAnimations(LOWERBODY);
     }
 
     void HandleMouseLook()
@@ -127,7 +152,7 @@ public class PlayerController : AnimatorBrain
         }
         else
         {
-            Play(Animations.IDLE1, _layer, false, false);
+            Play(idleAnimations[currentIdle], _layer, false, false);
         }
     }
 
