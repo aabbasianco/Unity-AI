@@ -67,6 +67,17 @@ public class AnimatorBrain : MonoBehaviour
         if (layerLocked[_layer] && !_bypassLock) return;
         layerLocked[_layer] = _lockLayer;
 
+        if (_bypassLock)
+        {
+            foreach (var item in animator.GetBehaviours<onExit>())
+            {
+                if (item.layerIndex == _layer)
+                {
+                    item.cancel = true;
+                }
+            }
+        }
+
         if (currentAnimation[_layer] == _animation) return;
 
         currentAnimation[_layer] = _animation;

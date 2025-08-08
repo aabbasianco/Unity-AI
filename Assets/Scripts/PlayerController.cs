@@ -37,6 +37,12 @@ public class PlayerController : AnimatorBrain
         Animations.IDLE3
     };
 
+    public static PlayerController instance;
+    private void Awake()
+    {
+        instance = this;
+    }
+
     void Start()
     {
         controller = GetComponent<CharacterController>();
@@ -70,7 +76,7 @@ public class PlayerController : AnimatorBrain
 
         CheckDeath();
         //CheckJumping();
-        //CheckShooting();
+        CheckShooting();
         CheckTopAnimation();
         CheckBottomAnimation();
     }
@@ -82,6 +88,22 @@ public class PlayerController : AnimatorBrain
             Play(Animations.DEATH, UPPERBODY, true, true);
             Play(Animations.DEATH, LOWERBODY, true, true);
         }
+    }
+
+    //void CheckJumping()
+    //{
+    //    if (!jumping && isGrounded&&Input.GetKeyDown(KeyCode.Space)
+    //    {
+    //        rb.AddForce(jumpForce * Vector3.up, ForceMode.Impulse);
+    //        jumping = false;
+    //        //jump sound
+    //    }
+    //}
+
+    void CheckShooting()
+    {
+        if (Input.GetKeyDown(KeyCode.R)) Play(Animations.PISTOLRELOAD, UPPERBODY, true, false);
+        //shooting = Input.GetKey(KeyCode.Mouse0);
     }
 
     void HandleMovement()
