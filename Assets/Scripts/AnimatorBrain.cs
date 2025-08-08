@@ -59,7 +59,7 @@ public class AnimatorBrain : MonoBehaviour
         layerLocked[_layer] = _lockLayer;
     }
 
-    public void Play(Animations _animation, int _layer, bool _lockLayer, bool _bypassLock, float _crossFade = .2f)
+    public void Play(Animations _animation, int _layer, bool _lockLayer, bool _bypassLock, float _crossFade = .05f)
     {
         if (_animation == Animations.NONE)
         {

@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using UnityEngine;
 
 [RequireComponent(typeof(CharacterController))]
@@ -10,9 +10,16 @@ public class PlayerController : AnimatorBrain
     public float jumpForce = 5f;
     public float gravity = -9.81f;
 
+    [Header("Animation Transition Settings")]
+    [SerializeField] private float defaultTransitionTime = 0.2f;
+    [SerializeField] private float sameAxisTransitionTime = 0.1f;  // Forward/Back or Left/Right
+    [SerializeField] private float crossAxisTransitionTime = 0.3f; // Forward/Back to Left/Right or vice versa
+    [SerializeField] private float idleToMovementTime = 0.15f;
+    [SerializeField] private float movementToIdleTime = 0.25f;
     [Header("References")]
     public Transform cameraTransform;
     public LayerMask groundMask;
+
     public float groundCheckDistance = 0.3f;
 
     private CharacterController controller;
@@ -177,27 +184,101 @@ public class PlayerController : AnimatorBrain
 
     private void CheckMovementAnimations(int _layer)
     {
-        Vector3 movement = new Vector3(moveX, 0f, moveZ).normalized;
+        Vector3 movement = new Vector3(moveX, 0f, moveZ);
+        Animations currentAnim = GetCurrentAnimations(_layer);
+        Animations targetAnimation = Animations.NONE;
+        float transitionTime = defaultTransitionTime;
 
         if (!grounded)
         {
-            Play(Animations.JUMPAIR, _layer, false, false);
+            targetAnimation = Animations.JUMPAIR;
+            transitionTime = GetTransitionTime(currentAnim, targetAnimation);
         }
-        else if (movement.magnitude > 0f)
+        else if (movement.magnitude > 0.1f)
         {
-            if (moveZ > 0)
-                Play(Animations.WALKFWD, _layer, false, false);
-            else if (moveZ < 0)
-                Play(Animations.WALKBWD, _layer, false, false);
-            else if (moveX > 0)
-                Play(Animations.WALKRIGHT, _layer, false, false);
-            else if (moveX < 0)
-                Play(Animations.WALKLEFT, _layer, false, false);
+            // Determine target animation based on dominant direction
+            if (Mathf.Abs(moveZ) > Mathf.Abs(moveX))
+            {
+                targetAnimation = moveZ > 0 ? Animations.WALKFWD : Animations.WALKBWD;
+            }
+            else
+            {
+                targetAnimation = moveX > 0 ? Animations.WALKRIGHT : Animations.WALKLEFT;
+            }
+            
+            transitionTime = GetTransitionTime(currentAnim, targetAnimation);
         }
         else
         {
-            Play(idleAnimations[currentIdle], _layer, false, false);
+            targetAnimation = idleAnimations[currentIdle];
+            transitionTime = GetTransitionTime(currentAnim, targetAnimation);
         }
+
+        if (targetAnimation != Animations.NONE)
+        {
+            Play(targetAnimation, _layer, false, false, transitionTime);
+        }
+    }
+
+    private float GetTransitionTime(Animations fromAnimation, Animations toAnimation)
+    {
+        // If transitioning to/from idle
+        if (IsIdleAnimation(fromAnimation) && !IsIdleAnimation(toAnimation))
+            return idleToMovementTime;
+        
+        if (!IsIdleAnimation(fromAnimation) && IsIdleAnimation(toAnimation))
+            return movementToIdleTime;
+
+        // If both are movement animations
+        if (IsMovementAnimation(fromAnimation) && IsMovementAnimation(toAnimation))
+        {
+            // Same axis transition (forward/back or left/right)
+            if (IsSameAxisTransition(fromAnimation, toAnimation))
+                return sameAxisTransitionTime;
+            
+            // Cross axis transition (forward/back to left/right or vice versa)
+            if (IsCrossAxisTransition(fromAnimation, toAnimation))
+                return crossAxisTransitionTime;
+        }
+
+        return defaultTransitionTime;
+    }
+
+    private bool IsIdleAnimation(Animations animation)
+    {
+        return animation == Animations.IDLE1 || animation == Animations.IDLE2 || animation == Animations.IDLE3;
+    }
+
+    private bool IsMovementAnimation(Animations animation)
+    {
+        return animation == Animations.WALKFWD || animation == Animations.WALKBWD || 
+               animation == Animations.WALKLEFT || animation == Animations.WALKRIGHT;
+    }
+
+    private bool IsSameAxisTransition(Animations from, Animations to)
+    {
+        // Forward/Backward transitions
+        bool isForwardBackTransition = (from == Animations.WALKFWD || from == Animations.WALKBWD) &&
+                                      (to == Animations.WALKFWD || to == Animations.WALKBWD);
+        
+        // Left/Right transitions  
+        bool isLeftRightTransition = (from == Animations.WALKLEFT || from == Animations.WALKRIGHT) &&
+                                    (to == Animations.WALKLEFT || to == Animations.WALKRIGHT);
+        
+        return isForwardBackTransition || isLeftRightTransition;
+    }
+
+    private bool IsCrossAxisTransition(Animations from, Animations to)
+    {
+        // Forward/Backward to Left/Right
+        bool isForwardBackToLeftRight = (from == Animations.WALKFWD || from == Animations.WALKBWD) &&
+                                       (to == Animations.WALKLEFT || to == Animations.WALKRIGHT);
+        
+        // Left/Right to Forward/Backward
+        bool isLeftRightToForwardBack = (from == Animations.WALKLEFT || from == Animations.WALKRIGHT) &&
+                                       (to == Animations.WALKFWD || to == Animations.WALKBWD);
+        
+        return isForwardBackToLeftRight || isLeftRightToForwardBack;
     }
 
     void DefaultAnimation(int _layer)
