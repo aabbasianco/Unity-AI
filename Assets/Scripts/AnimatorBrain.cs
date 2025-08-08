@@ -33,6 +33,9 @@ public class AnimatorBrain : MonoBehaviour
     private bool[] layerLocked;
     private Action<int> DefaultAnimation;
 
+    protected bool grounded = true;
+    public bool Grounded { get => grounded; }
+
     protected void Initialize(int _layers, Animations _startingAnimation, Animator _animator, Action<int> _DefaultAnimation)
     {
         layerLocked = new bool[_layers];
@@ -56,7 +59,7 @@ public class AnimatorBrain : MonoBehaviour
         layerLocked[_layer] = _lockLayer;
     }
 
-    public void Play(Animations _animation, int _layer, bool _lockLayer, bool _bypassLock, float _crossFade = .1f)
+    public void Play(Animations _animation, int _layer, bool _lockLayer, bool _bypassLock, float _crossFade = .2f)
     {
         if (_animation == Animations.NONE)
         {
