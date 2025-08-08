@@ -68,8 +68,20 @@ public class PlayerController : AnimatorBrain
         HandleMovement();
         HandleMouseLook();
 
+        CheckDeath();
+        //CheckJumping();
+        //CheckShooting();
         CheckTopAnimation();
         CheckBottomAnimation();
+    }
+
+    void CheckDeath()
+    {
+        if (Input.GetKeyDown(KeyCode.G))
+        {
+            Play(Animations.DEATH, UPPERBODY, true, true);
+            Play(Animations.DEATH, LOWERBODY, true, true);
+        }
     }
 
     void HandleMovement()
