@@ -41,9 +41,9 @@ public class PlayerController : AnimatorBrain
 
     private readonly Animations[] idleAnimations =
     {
-        Animations.IDLE1,
-        Animations.IDLE2,
-        Animations.IDLE3
+        Animations.IDLE
+        //Animations.IDLE2,
+        //Animations.IDLE3
     };
 
     public static PlayerController instance;
@@ -57,7 +57,7 @@ public class PlayerController : AnimatorBrain
         controller = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
 
-        Initialize(animator.layerCount, Animations.IDLE1, animator, DefaultAnimation);
+        Initialize(animator.layerCount, Animations.IDLE, animator, DefaultAnimation);
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
@@ -105,7 +105,7 @@ public class PlayerController : AnimatorBrain
     {
         if (!jumping && grounded && Input.GetKeyDown(KeyCode.Space))
         {
-            Play(Animations.JUMPSTART, LOWERBODY, true, false);
+            Play(Animations.JUMPUP, LOWERBODY, true, false);
             //rb.AddForce(jumpForce * Vector3.up, ForceMode.Impulse);
             jumping = true;
             //jump sound
@@ -199,7 +199,7 @@ public class PlayerController : AnimatorBrain
             // Determine target animation based on dominant direction
             if (Mathf.Abs(moveZ) > Mathf.Abs(moveX))
             {
-                targetAnimation = moveZ > 0 ? Animations.WALKFWD : Animations.WALKBWD;
+                targetAnimation = moveZ > 0 ? Animations.WALKFORWARD : Animations.WALKBACKWARD;
             }
             else
             {
@@ -246,20 +246,20 @@ public class PlayerController : AnimatorBrain
 
     private bool IsIdleAnimation(Animations animation)
     {
-        return animation == Animations.IDLE1 || animation == Animations.IDLE2 || animation == Animations.IDLE3;
+        return animation == Animations.IDLE /*|| animation == Animations.IDLE2 || animation == Animations.IDLE3*/;
     }
 
     private bool IsMovementAnimation(Animations animation)
     {
-        return animation == Animations.WALKFWD || animation == Animations.WALKBWD || 
+        return animation == Animations.WALKFORWARD || animation == Animations.WALKBACKWARD || 
                animation == Animations.WALKLEFT || animation == Animations.WALKRIGHT;
     }
 
     private bool IsSameAxisTransition(Animations from, Animations to)
     {
         // Forward/Backward transitions
-        bool isForwardBackTransition = (from == Animations.WALKFWD || from == Animations.WALKBWD) &&
-                                      (to == Animations.WALKFWD || to == Animations.WALKBWD);
+        bool isForwardBackTransition = (from == Animations.WALKFORWARD || from == Animations.WALKBACKWARD) &&
+                                      (to == Animations.WALKFORWARD || to == Animations.WALKBACKWARD);
         
         // Left/Right transitions  
         bool isLeftRightTransition = (from == Animations.WALKLEFT || from == Animations.WALKRIGHT) &&
@@ -271,12 +271,12 @@ public class PlayerController : AnimatorBrain
     private bool IsCrossAxisTransition(Animations from, Animations to)
     {
         // Forward/Backward to Left/Right
-        bool isForwardBackToLeftRight = (from == Animations.WALKFWD || from == Animations.WALKBWD) &&
+        bool isForwardBackToLeftRight = (from == Animations.WALKFORWARD || from == Animations.WALKBACKWARD) &&
                                        (to == Animations.WALKLEFT || to == Animations.WALKRIGHT);
         
         // Left/Right to Forward/Backward
         bool isLeftRightToForwardBack = (from == Animations.WALKLEFT || from == Animations.WALKRIGHT) &&
-                                       (to == Animations.WALKFWD || to == Animations.WALKBWD);
+                                       (to == Animations.WALKFORWARD || to == Animations.WALKBACKWARD);
         
         return isForwardBackToLeftRight || isLeftRightToForwardBack;
     }
