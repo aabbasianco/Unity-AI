@@ -587,7 +587,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   animation: 20
   lockLayer: 0
-  crossFade: 0
+  crossFade: 0.1
+  cancel: 0
+  layerIndex: -1
 --- !u!91 &9100000
 AnimatorController:
   m_ObjectHideFlags: 0
