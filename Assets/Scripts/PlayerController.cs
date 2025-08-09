@@ -5,7 +5,6 @@ using UnityEngine;
 public class PlayerController : AnimatorBrain
 {
     [Header("Movement Settings")]
-    public float walkSpeed = 5f; // This will be calculated dynamically
     public float mouseSensitivity = 2f;
     public float jumpForce = 5f;
     public float gravity = -9.81f;
@@ -26,7 +25,7 @@ public class PlayerController : AnimatorBrain
     
     [Header("Movement State")]
     [SerializeField] private MovementMode currentMovementMode = MovementMode.Walk;
-    [SerializeField] private float movementSpeed = 5f; // Current calculated speed
+    public float movementSpeed = 5f; // Current calculated speed
     
     [Header("Modifiers")]
     [SerializeField] private bool isInjured = false;
@@ -187,9 +186,8 @@ public class PlayerController : AnimatorBrain
         // Apply modifiers
         float finalSpeed = ApplySpeedModifiers(baseSpeed);
         
-        // Update movement speeds
+        // Update movement speed
         movementSpeed = finalSpeed;
-        walkSpeed = finalSpeed; // Keep walkSpeed in sync for compatibility
     }
     
     float GetBaseSpeedForMode(MovementMode mode)
@@ -528,17 +526,22 @@ public class PlayerController : AnimatorBrain
             walkWeight = 1f - blendFactor;
             runWeight = blendFactor;
         }
-        else if (movementSpeed <= sprintThreshold)
-        {
-            // Blend from run to sprint
-            float blendFactor = (movementSpeed - runThreshold) / (sprintThreshold - runThreshold);
-            runWeight = 1f - blendFactor;
-            sprintWeight = blendFactor;
-        }
         else
         {
-            // Pure sprint
-            sprintWeight = 1f;
+            // Run layer is zero, blend from walk to sprint
+            runWeight = 0f;
+            if (movementSpeed <= sprintThreshold)
+            {
+                float sprintBlendFactor = (movementSpeed - runThreshold) / (sprintThreshold - runThreshold);
+                walkWeight = 1f - sprintBlendFactor;
+                sprintWeight = sprintBlendFactor;
+            }
+            else
+            {
+                // Pure sprint
+                walkWeight = 0f;
+                sprintWeight = 1f;
+            }
         }
         
         // Smoothly transition layer weights
