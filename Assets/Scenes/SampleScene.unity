@@ -205,15 +205,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dc9435bea99df6e4d890f98edfb28f5e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  walkSpeed: 5
+  mouseSensitivity: 10
+  jumpForce: 5
+  gravity: -9.81
   slowWalkSpeed: 2
   normalWalkSpeed: 3
   fastWalkSpeed: 5
   normalRunSpeed: 7
   fastRunSpeed: 8.5
-  sprintSpeed: 9.5
-  mouseSensitivity: 10
-  jumpForce: 5
-  gravity: -9.81
+  normalSprintSpeed: 9.5
+  fastSprintSpeed: 10.5
+  walkSpeedStyle: 1
+  runSpeedStyle: 1
+  sprintSpeedStyle: 1
+  currentMovementMode: 0
+  movementSpeed: 5
+  isInjured: 0
+  injuredSpeedReduction: 0.3
+  holdShiftToRun: 0
   walkThreshold: 3
   runThreshold: 8
   sprintThreshold: 9.5

@@ -5,17 +5,35 @@ using UnityEngine;
 public class PlayerController : AnimatorBrain
 {
     [Header("Movement Settings")]
+    public float walkSpeed = 5f; // This will be calculated dynamically
+    public float mouseSensitivity = 2f;
+    public float jumpForce = 5f;
+    public float gravity = -9.81f;
+    
+    [Header("Speed Presets")]
     public float slowWalkSpeed = 2f;
     public float normalWalkSpeed = 3f;
     public float fastWalkSpeed = 5f;
     public float normalRunSpeed = 7f;
     public float fastRunSpeed = 8.5f;
-    public float sprintSpeed = 9.5f;
-    private float movementSpeed = 5f;
-    [Space(12)]
-    public float mouseSensitivity = 2f;
-    public float jumpForce = 5f;
-    public float gravity = -9.81f;
+    public float normalSprintSpeed = 9.5f;
+    public float fastSprintSpeed = 10.5f;
+    
+    [Header("Scene Movement Configuration")]
+    [SerializeField] private SpeedStyle walkSpeedStyle = SpeedStyle.Normal;
+    [SerializeField] private SpeedStyle runSpeedStyle = SpeedStyle.Normal;
+    [SerializeField] private SpeedStyle sprintSpeedStyle = SpeedStyle.Normal;
+    
+    [Header("Movement State")]
+    [SerializeField] private MovementMode currentMovementMode = MovementMode.Walk;
+    [SerializeField] private float movementSpeed = 5f; // Current calculated speed
+    
+    [Header("Modifiers")]
+    [SerializeField] private bool isInjured = false;
+    [SerializeField] private float injuredSpeedReduction = 0.3f; // 30% speed reduction when injured
+    
+    [Header("Input Settings")]
+    [SerializeField] private bool holdShiftToRun = true; // If false, Left Shift toggles between modes
     
     [Header("Movement Speed Thresholds")]
     [SerializeField] private float walkThreshold = 3f;     // Below this = walk
@@ -103,6 +121,7 @@ public class PlayerController : AnimatorBrain
 
     void Update()
     {
+        HandleMovementInput();
         HandleMovement();
         HandleMouseLook();
 
@@ -112,6 +131,111 @@ public class PlayerController : AnimatorBrain
 
         CheckTopAnimation();
         CheckBottomAnimation();
+    }
+    
+    void HandleMovementInput()
+    {
+        // Handle Left Shift input for run/sprint
+        if (holdShiftToRun)
+        {
+            // Hold to run/sprint mode
+            if (Input.GetKey(KeyCode.LeftShift))
+            {
+                // Cycle between run and sprint on additional presses
+                if (Input.GetKeyDown(KeyCode.LeftShift))
+                {
+                    if (currentMovementMode == MovementMode.Walk)
+                        currentMovementMode = MovementMode.Run;
+                    else if (currentMovementMode == MovementMode.Run)
+                        currentMovementMode = MovementMode.Sprint;
+                }
+            }
+            else
+            {
+                currentMovementMode = MovementMode.Walk;
+            }
+        }
+        else
+        {
+            // Toggle mode on shift press
+            if (Input.GetKeyDown(KeyCode.LeftShift))
+            {
+                switch (currentMovementMode)
+                {
+                    case MovementMode.Walk:
+                        currentMovementMode = MovementMode.Run;
+                        break;
+                    case MovementMode.Run:
+                        currentMovementMode = MovementMode.Sprint;
+                        break;
+                    case MovementMode.Sprint:
+                        currentMovementMode = MovementMode.Walk;
+                        break;
+                }
+            }
+        }
+        
+        // Calculate current movement speed
+        CalculateMovementSpeed();
+    }
+    
+    void CalculateMovementSpeed()
+    {
+        // Get base speed based on current movement mode and scene configuration
+        float baseSpeed = GetBaseSpeedForMode(currentMovementMode);
+        
+        // Apply modifiers
+        float finalSpeed = ApplySpeedModifiers(baseSpeed);
+        
+        // Update movement speeds
+        movementSpeed = finalSpeed;
+        walkSpeed = finalSpeed; // Keep walkSpeed in sync for compatibility
+    }
+    
+    float GetBaseSpeedForMode(MovementMode mode)
+    {
+        switch (mode)
+        {
+            case MovementMode.Walk:
+                return GetSpeedByStyle(walkSpeedStyle, slowWalkSpeed, normalWalkSpeed, fastWalkSpeed);
+            case MovementMode.Run:
+                return GetSpeedByStyle(runSpeedStyle, normalRunSpeed, normalRunSpeed, fastRunSpeed);
+            case MovementMode.Sprint:
+                return GetSpeedByStyle(sprintSpeedStyle, normalSprintSpeed, normalSprintSpeed, fastSprintSpeed);
+            default:
+                return normalWalkSpeed;
+        }
+    }
+    
+    float GetSpeedByStyle(SpeedStyle style, float slowSpeed, float normalSpeed, float fastSpeed)
+    {
+        switch (style)
+        {
+            case SpeedStyle.Slow:
+                return slowSpeed;
+            case SpeedStyle.Normal:
+                return normalSpeed;
+            case SpeedStyle.Fast:
+                return fastSpeed;
+            default:
+                return normalSpeed;
+        }
+    }
+    
+    float ApplySpeedModifiers(float baseSpeed)
+    {
+        float modifiedSpeed = baseSpeed;
+        
+        // Apply injured state modifier
+        if (isInjured)
+        {
+            modifiedSpeed *= (1f - injuredSpeedReduction);
+        }
+        
+        // Add more modifiers here as needed
+        // Example: if (isEncumbered) modifiedSpeed *= 0.8f;
+        
+        return modifiedSpeed;
     }
 
     void CheckDeath()
@@ -427,11 +551,12 @@ public class PlayerController : AnimatorBrain
         SetLayerWeight(SPRINTLAYER, Mathf.Lerp(currentSprintWeight, sprintWeight, layerTransitionSpeed * Time.deltaTime));
         
         // Debug information (remove this later if not needed)
-        if (Input.GetKey(KeyCode.LeftShift)) // Hold Shift to see debug info
+        if (Input.GetKey(KeyCode.LeftControl)) // Hold Left Ctrl to see debug info (changed from Shift since Shift is used for movement)
         {
             MovementType currentType = GetCurrentMovementType();
             string direction = GetCurrentDirection();
-            Debug.Log($"Speed: {movementSpeed:F1} | Dir: {direction} | Type: {currentType} | Walk: {GetLayerWeight(WALKLAYER):F2} | Run: {GetLayerWeight(RUNLAYER):F2} | Sprint: {GetLayerWeight(SPRINTLAYER):F2}");
+            string modifiers = isInjured ? " [INJURED]" : "";
+            Debug.Log($"Mode: {currentMovementMode} | Speed: {movementSpeed:F1}{modifiers} | Dir: {direction} | Type: {currentType} | Walk: {GetLayerWeight(WALKLAYER):F2} | Run: {GetLayerWeight(RUNLAYER):F2} | Sprint: {GetLayerWeight(SPRINTLAYER):F2}");
         }
     }
     
@@ -475,6 +600,20 @@ public class PlayerController : AnimatorBrain
         Walk,
         Run,
         Sprint
+    }
+    
+    public enum MovementMode
+    {
+        Walk,
+        Run,
+        Sprint
+    }
+    
+    public enum SpeedStyle
+    {
+        Slow,
+        Normal,
+        Fast
     }
 
     private float GetTransitionTime(Animations fromAnimation, Animations toAnimation)
@@ -542,5 +681,47 @@ public class PlayerController : AnimatorBrain
     {
         if (_layer == UPPERBODY) CheckTopAnimation();
         else CheckBottomAnimation();
+    }
+    
+    // Public methods for external control
+    public void SetMovementMode(MovementMode mode)
+    {
+        currentMovementMode = mode;
+        CalculateMovementSpeed();
+    }
+    
+    public MovementMode GetMovementMode()
+    {
+        return currentMovementMode;
+    }
+    
+    public void SetInjuredState(bool injured)
+    {
+        isInjured = injured;
+        CalculateMovementSpeed();
+    }
+    
+    public bool GetInjuredState()
+    {
+        return isInjured;
+    }
+    
+    public void SetSceneSpeedStyles(SpeedStyle walkStyle, SpeedStyle runStyle, SpeedStyle sprintStyle)
+    {
+        walkSpeedStyle = walkStyle;
+        runSpeedStyle = runStyle;
+        sprintSpeedStyle = sprintStyle;
+        CalculateMovementSpeed();
+    }
+    
+    public float GetCurrentEffectiveSpeed()
+    {
+        return movementSpeed;
+    }
+    
+    public string GetMovementInfo()
+    {
+        string modifiers = isInjured ? " [INJURED]" : "";
+        return $"Mode: {currentMovementMode} | Speed: {movementSpeed:F1}{modifiers} | Walk Style: {walkSpeedStyle} | Run Style: {runSpeedStyle} | Sprint Style: {sprintSpeedStyle}";
     }
 }
