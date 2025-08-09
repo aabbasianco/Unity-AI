@@ -5,10 +5,18 @@ using UnityEngine;
 public class PlayerController : AnimatorBrain
 {
     [Header("Movement Settings")]
-    public float movementSpeed = 5f;
+    public float walkSpeed = 5f;
     public float mouseSensitivity = 2f;
     public float jumpForce = 5f;
     public float gravity = -9.81f;
+    
+    [Header("Movement Speed Thresholds")]
+    [SerializeField] private float walkThreshold = 3f;     // Below this = walk
+    [SerializeField] private float runThreshold = 7f;      // Between walk and run = run  
+    [SerializeField] private float sprintThreshold = 10f;  // Above run = sprint
+    
+    [Header("Layer Weight Transition")]
+    [SerializeField] private float layerTransitionSpeed = 5f; // How fast layers transition
 
     [Header("Animation Transition Settings")]
     [SerializeField] private float defaultTransitionTime = 0.2f;
@@ -35,6 +43,9 @@ public class PlayerController : AnimatorBrain
     private int currentIdle = 0;
     private const int UPPERBODY = 0;
     private const int LOWERBODY = 1;
+    private const int WALKLAYER = 1;    // Assuming you'll create these layers
+    private const int RUNLAYER = 2;     // in your animator controller
+    private const int SPRINTLAYER = 3;
 
     public bool shooting = false;
     public bool jumping = false;
@@ -57,7 +68,9 @@ public class PlayerController : AnimatorBrain
         controller = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
 
-        Initialize(animator.layerCount, Animations.IDLE, animator, DefaultAnimation);
+        // Initialize with the actual number of layers in the animator
+        int layerCount = Mathf.Max(animator.layerCount, 4); // Ensure we have at least 4 layers
+        Initialize(layerCount, Animations.IDLE, animator, DefaultAnimation);
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
@@ -134,7 +147,7 @@ public class PlayerController : AnimatorBrain
         moveZ = Input.GetAxis("Vertical");
 
         Vector3 move = (transform.right * moveX + transform.forward * moveZ).normalized;
-        controller.Move(move * movementSpeed * Time.deltaTime);
+        controller.Move(move * walkSpeed * Time.deltaTime);
 
         // --- Jump ---
         if (Input.GetButtonDown("Jump") && grounded)
@@ -193,31 +206,195 @@ public class PlayerController : AnimatorBrain
         {
             targetAnimation = Animations.JUMPAIR;
             transitionTime = GetTransitionTime(currentAnim, targetAnimation);
+            Play(targetAnimation, _layer, false, false, transitionTime);
+            
+            // Reset all movement layer weights when jumping
+            if (_layer == LOWERBODY)
+            {
+                SetLayerWeight(WALKLAYER, 0f);
+                SetLayerWeight(RUNLAYER, 0f);
+                SetLayerWeight(SPRINTLAYER, 0f);
+            }
         }
         else if (movement.magnitude > 0.1f)
         {
-            // Determine target animation based on dominant direction
-            if (Mathf.Abs(moveZ) > Mathf.Abs(moveX))
-            {
-                targetAnimation = moveZ > 0 ? Animations.WALKFORWARD : Animations.WALKBACKWARD;
-            }
-            else
-            {
-                targetAnimation = moveX > 0 ? Animations.WALKRIGHT : Animations.WALKLEFT;
-            }
+            // Determine movement direction
+            Animations walkAnim, runAnim, sprintAnim;
+            GetMovementAnimations(out walkAnim, out runAnim, out sprintAnim);
             
-            transitionTime = GetTransitionTime(currentAnim, targetAnimation);
+            if (_layer == UPPERBODY)
+            {
+                // Upper body selects animation based on current movement speed
+                Animations upperBodyAnimation = GetUpperBodyAnimation(walkAnim, runAnim, sprintAnim);
+                targetAnimation = upperBodyAnimation;
+                transitionTime = GetTransitionTime(currentAnim, targetAnimation);
+                Play(targetAnimation, _layer, false, false, transitionTime);
+            }
+            else if (_layer == LOWERBODY)
+            {
+                // Lower body - play animations on all movement layers and update weights
+                PlayMovementAnimationsOnAllLayers(walkAnim, runAnim, sprintAnim);
+                UpdateMovementLayerWeights();
+            }
         }
         else
         {
             targetAnimation = idleAnimations[currentIdle];
             transitionTime = GetTransitionTime(currentAnim, targetAnimation);
-        }
-
-        if (targetAnimation != Animations.NONE)
-        {
             Play(targetAnimation, _layer, false, false, transitionTime);
+            
+            // Reset all movement layer weights when idle
+            if (_layer == LOWERBODY)
+            {
+                SetLayerWeight(WALKLAYER, 0f);
+                SetLayerWeight(RUNLAYER, 0f);
+                SetLayerWeight(SPRINTLAYER, 0f);
+            }
         }
+    }
+    
+    private void GetMovementAnimations(out Animations walkAnim, out Animations runAnim, out Animations sprintAnim)
+    {
+        // Determine direction based on input
+        if (Mathf.Abs(moveZ) > Mathf.Abs(moveX))
+        {
+            if (moveZ > 0) // Forward
+            {
+                walkAnim = Animations.WALKFORWARD;
+                runAnim = Animations.RUNFORWARD;
+                sprintAnim = Animations.SPRINTFORWARD;
+            }
+            else // Backward
+            {
+                walkAnim = Animations.WALKBACKWARD;
+                runAnim = Animations.RUNBACKWARD;
+                sprintAnim = Animations.SPRINTBACKWARD;
+            }
+        }
+        else
+        {
+            if (moveX > 0) // Right
+            {
+                walkAnim = Animations.WALKRIGHT;
+                runAnim = Animations.RUNRIGHT;
+                sprintAnim = Animations.SPRINTRIGHT;
+            }
+            else // Left
+            {
+                walkAnim = Animations.WALKLEFT;
+                runAnim = Animations.RUNLEFT;
+                sprintAnim = Animations.SPRINTLEFT;
+            }
+        }
+    }
+    
+    private Animations GetUpperBodyAnimation(Animations walkAnim, Animations runAnim, Animations sprintAnim)
+    {
+        // Upper body uses discrete animation selection based on speed thresholds
+        MovementType currentMovement = GetCurrentMovementType();
+        
+        switch (currentMovement)
+        {
+            case MovementType.Walk:
+                return walkAnim;
+            case MovementType.Run:
+                return runAnim;
+            case MovementType.Sprint:
+                return sprintAnim;
+            default:
+                return walkAnim;
+        }
+    }
+    
+    private void PlayMovementAnimationsOnAllLayers(Animations walkAnim, Animations runAnim, Animations sprintAnim)
+    {
+        // Play corresponding animations on each movement layer
+        Animations currentWalkAnim = GetCurrentAnimations(WALKLAYER);
+        Animations currentRunAnim = GetCurrentAnimations(RUNLAYER);
+        Animations currentSprintAnim = GetCurrentAnimations(SPRINTLAYER);
+        
+        float transitionTime = defaultTransitionTime;
+        
+        // Only play if animation is different to avoid unnecessary crossfades
+        if (currentWalkAnim != walkAnim)
+        {
+            Play(walkAnim, WALKLAYER, false, false, transitionTime);
+        }
+        
+        if (currentRunAnim != runAnim)
+        {
+            Play(runAnim, RUNLAYER, false, false, transitionTime);
+        }
+        
+        if (currentSprintAnim != sprintAnim)
+        {
+            Play(sprintAnim, SPRINTLAYER, false, false, transitionTime);
+        }
+    }
+    
+    private void UpdateMovementLayerWeights()
+    {
+        float walkWeight = 0f;
+        float runWeight = 0f;
+        float sprintWeight = 0f;
+        
+        if (walkSpeed <= walkThreshold)
+        {
+            // Pure walk
+            walkWeight = 1f;
+        }
+        else if (walkSpeed <= runThreshold)
+        {
+            // Blend from walk to run
+            float blendFactor = (walkSpeed - walkThreshold) / (runThreshold - walkThreshold);
+            walkWeight = 1f - blendFactor;
+            runWeight = blendFactor;
+        }
+        else if (walkSpeed <= sprintThreshold)
+        {
+            // Blend from run to sprint
+            float blendFactor = (walkSpeed - runThreshold) / (sprintThreshold - runThreshold);
+            runWeight = 1f - blendFactor;
+            sprintWeight = blendFactor;
+        }
+        else
+        {
+            // Pure sprint
+            sprintWeight = 1f;
+        }
+        
+        // Smoothly transition layer weights
+        float currentWalkWeight = GetLayerWeight(WALKLAYER);
+        float currentRunWeight = GetLayerWeight(RUNLAYER);
+        float currentSprintWeight = GetLayerWeight(SPRINTLAYER);
+        
+        SetLayerWeight(WALKLAYER, Mathf.Lerp(currentWalkWeight, walkWeight, layerTransitionSpeed * Time.deltaTime));
+        SetLayerWeight(RUNLAYER, Mathf.Lerp(currentRunWeight, runWeight, layerTransitionSpeed * Time.deltaTime));
+        SetLayerWeight(SPRINTLAYER, Mathf.Lerp(currentSprintWeight, sprintWeight, layerTransitionSpeed * Time.deltaTime));
+        
+        // Debug information (remove this later if not needed)
+        if (Input.GetKey(KeyCode.LeftShift)) // Hold Shift to see debug info
+        {
+            MovementType currentType = GetCurrentMovementType();
+            Debug.Log($"Speed: {walkSpeed:F1} | Type: {currentType} | Walk: {GetLayerWeight(WALKLAYER):F2} | Run: {GetLayerWeight(RUNLAYER):F2} | Sprint: {GetLayerWeight(SPRINTLAYER):F2}");
+        }
+    }
+    
+    private MovementType GetCurrentMovementType()
+    {
+        if (walkSpeed <= walkThreshold) 
+            return MovementType.Walk;
+        else if (walkSpeed <= runThreshold) 
+            return MovementType.Run;
+        else 
+            return MovementType.Sprint;
+    }
+    
+    private enum MovementType
+    {
+        Walk,
+        Run,
+        Sprint
     }
 
     private float GetTransitionTime(Animations fromAnimation, Animations toAnimation)

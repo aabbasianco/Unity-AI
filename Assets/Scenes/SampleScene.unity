@@ -205,10 +205,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dc9435bea99df6e4d890f98edfb28f5e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  movementSpeed: 1
+  walkSpeed: 2
   mouseSensitivity: 10
   jumpForce: 5
   gravity: -9.81
+  walkThreshold: 3
+  runThreshold: 7
+  sprintThreshold: 10
+  layerTransitionSpeed: 5
   defaultTransitionTime: 0.2
   sameAxisTransitionTime: 0.3
   crossAxisTransitionTime: 0.1

@@ -121,6 +121,26 @@ public class AnimatorBrain : MonoBehaviour
         currentAnimation[_layer] = _animation;
         animator.CrossFade(animations[(int)currentAnimation[_layer]], _crossFade, _layer);
     }
+    
+    public void SetLayerWeight(int _layer, float _weight)
+    {
+        animator.SetLayerWeight(_layer, Mathf.Clamp01(_weight));
+    }
+    
+    public float GetLayerWeight(int _layer)
+    {
+        return animator.GetLayerWeight(_layer);
+    }
+    
+    public void SetAnimationSpeed(float _speedMultiplier)
+    {
+        animator.speed = Mathf.Clamp(_speedMultiplier, 0.1f, 3f);
+    }
+    
+    public float GetAnimationSpeed()
+    {
+        return animator.speed;
+    }
 }
 
 public enum Animations
