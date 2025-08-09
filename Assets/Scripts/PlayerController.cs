@@ -15,6 +15,9 @@ public class PlayerController : AnimatorBrain
     [SerializeField] private float runThreshold = 7f;      // Between walk and run = run  
     [SerializeField] private float sprintThreshold = 10f;  // Above run = sprint
     
+    [Header("8-Directional Settings")]
+    [SerializeField] private float diagonalThreshold = 0.5f; // Threshold for diagonal movement detection
+    
     [Header("Layer Weight Transition")]
     [SerializeField] private float layerTransitionSpeed = 5f; // How fast layers transition
 
@@ -255,35 +258,79 @@ public class PlayerController : AnimatorBrain
     
     private void GetMovementAnimations(out Animations walkAnim, out Animations runAnim, out Animations sprintAnim)
     {
-        // Determine direction based on input
-        if (Mathf.Abs(moveZ) > Mathf.Abs(moveX))
+        // Normalize input values
+        float normalizedX = Mathf.Abs(moveX);
+        float normalizedZ = Mathf.Abs(moveZ);
+        
+        // Determine if this is diagonal movement
+        bool isDiagonal = normalizedX > diagonalThreshold && normalizedZ > diagonalThreshold;
+        
+        if (isDiagonal)
         {
-            if (moveZ > 0) // Forward
+            // 8-Directional: Handle diagonal movement
+            if (moveZ > 0) // Forward diagonals
             {
-                walkAnim = Animations.WALKFORWARD;
-                runAnim = Animations.RUNFORWARD;
-                sprintAnim = Animations.SPRINTFORWARD;
+                if (moveX > 0) // Forward-Right
+                {
+                    walkAnim = Animations.WALKFORWARDRIGHT;
+                    runAnim = Animations.RUNFORWARDRIGHT;
+                    sprintAnim = Animations.SPRINTFORWARDRIGHT;
+                }
+                else // Forward-Left
+                {
+                    walkAnim = Animations.WALKFORWARDLEFT;
+                    runAnim = Animations.RUNFORWARDLEFT;
+                    sprintAnim = Animations.SPRINTFORWARDLEFT;
+                }
             }
-            else // Backward
+            else // Backward diagonals
             {
-                walkAnim = Animations.WALKBACKWARD;
-                runAnim = Animations.RUNBACKWARD;
-                sprintAnim = Animations.SPRINTBACKWARD;
+                if (moveX > 0) // Backward-Right
+                {
+                    walkAnim = Animations.WALKBACKWARDRIGHT;
+                    runAnim = Animations.RUNBACKWARDRIGHT;
+                    sprintAnim = Animations.SPRINTBACKWARDRIGHT;
+                }
+                else // Backward-Left
+                {
+                    walkAnim = Animations.WALKBACKWARDLEFT;
+                    runAnim = Animations.RUNBACKWARDLEFT;
+                    sprintAnim = Animations.SPRINTBACKWARDLEFT;
+                }
             }
         }
         else
         {
-            if (moveX > 0) // Right
+            // 4-Directional: Handle cardinal directions
+            if (normalizedZ > normalizedX)
             {
-                walkAnim = Animations.WALKRIGHT;
-                runAnim = Animations.RUNRIGHT;
-                sprintAnim = Animations.SPRINTRIGHT;
+                if (moveZ > 0) // Forward
+                {
+                    walkAnim = Animations.WALKFORWARD;
+                    runAnim = Animations.RUNFORWARD;
+                    sprintAnim = Animations.SPRINTFORWARD;
+                }
+                else // Backward
+                {
+                    walkAnim = Animations.WALKBACKWARD;
+                    runAnim = Animations.RUNBACKWARD;
+                    sprintAnim = Animations.SPRINTBACKWARD;
+                }
             }
-            else // Left
+            else
             {
-                walkAnim = Animations.WALKLEFT;
-                runAnim = Animations.RUNLEFT;
-                sprintAnim = Animations.SPRINTLEFT;
+                if (moveX > 0) // Right
+                {
+                    walkAnim = Animations.WALKRIGHT;
+                    runAnim = Animations.RUNRIGHT;
+                    sprintAnim = Animations.SPRINTRIGHT;
+                }
+                else // Left
+                {
+                    walkAnim = Animations.WALKLEFT;
+                    runAnim = Animations.RUNLEFT;
+                    sprintAnim = Animations.SPRINTLEFT;
+                }
             }
         }
     }
@@ -376,7 +423,33 @@ public class PlayerController : AnimatorBrain
         if (Input.GetKey(KeyCode.LeftShift)) // Hold Shift to see debug info
         {
             MovementType currentType = GetCurrentMovementType();
-            Debug.Log($"Speed: {walkSpeed:F1} | Type: {currentType} | Walk: {GetLayerWeight(WALKLAYER):F2} | Run: {GetLayerWeight(RUNLAYER):F2} | Sprint: {GetLayerWeight(SPRINTLAYER):F2}");
+            string direction = GetCurrentDirection();
+            Debug.Log($"Speed: {walkSpeed:F1} | Dir: {direction} | Type: {currentType} | Walk: {GetLayerWeight(WALKLAYER):F2} | Run: {GetLayerWeight(RUNLAYER):F2} | Sprint: {GetLayerWeight(SPRINTLAYER):F2}");
+        }
+    }
+    
+    private string GetCurrentDirection()
+    {
+        float normalizedX = Mathf.Abs(moveX);
+        float normalizedZ = Mathf.Abs(moveZ);
+        
+        if (normalizedX < 0.1f && normalizedZ < 0.1f) return "Idle";
+        
+        bool isDiagonal = normalizedX > diagonalThreshold && normalizedZ > diagonalThreshold;
+        
+        if (isDiagonal)
+        {
+            if (moveZ > 0)
+                return moveX > 0 ? "Forward-Right" : "Forward-Left";
+            else
+                return moveX > 0 ? "Backward-Right" : "Backward-Left";
+        }
+        else
+        {
+            if (normalizedZ > normalizedX)
+                return moveZ > 0 ? "Forward" : "Backward";
+            else
+                return moveX > 0 ? "Right" : "Left";
         }
     }
     
