@@ -5,15 +5,22 @@ using UnityEngine;
 public class PlayerController : AnimatorBrain
 {
     [Header("Movement Settings")]
-    public float walkSpeed = 5f;
+    public float slowWalkSpeed = 2f;
+    public float normalWalkSpeed = 3f;
+    public float fastWalkSpeed = 5f;
+    public float normalRunSpeed = 7f;
+    public float fastRunSpeed = 8.5f;
+    public float sprintSpeed = 9.5f;
+    private float movementSpeed = 5f;
+    [Space(12)]
     public float mouseSensitivity = 2f;
     public float jumpForce = 5f;
     public float gravity = -9.81f;
     
     [Header("Movement Speed Thresholds")]
     [SerializeField] private float walkThreshold = 3f;     // Below this = walk
-    [SerializeField] private float runThreshold = 7f;      // Between walk and run = run  
-    [SerializeField] private float sprintThreshold = 10f;  // Above run = sprint
+    [SerializeField] private float runThreshold = 8f;      // Between walk and run = run  
+    [SerializeField] private float sprintThreshold = 9.5f;  // Above run = sprint
     
     [Header("8-Directional Settings")]
     [SerializeField] private float diagonalThreshold = 0.5f; // Threshold for diagonal movement detection
@@ -150,7 +157,7 @@ public class PlayerController : AnimatorBrain
         moveZ = Input.GetAxis("Vertical");
 
         Vector3 move = (transform.right * moveX + transform.forward * moveZ).normalized;
-        controller.Move(move * walkSpeed * Time.deltaTime);
+        controller.Move(move * movementSpeed * Time.deltaTime);
 
         // --- Jump ---
         if (Input.GetButtonDown("Jump") && grounded)
@@ -385,22 +392,22 @@ public class PlayerController : AnimatorBrain
         float runWeight = 0f;
         float sprintWeight = 0f;
         
-        if (walkSpeed <= walkThreshold)
+        if (movementSpeed <= walkThreshold)
         {
             // Pure walk
             walkWeight = 1f;
         }
-        else if (walkSpeed <= runThreshold)
+        else if (movementSpeed <= runThreshold)
         {
             // Blend from walk to run
-            float blendFactor = (walkSpeed - walkThreshold) / (runThreshold - walkThreshold);
+            float blendFactor = (movementSpeed - walkThreshold) / (runThreshold - walkThreshold);
             walkWeight = 1f - blendFactor;
             runWeight = blendFactor;
         }
-        else if (walkSpeed <= sprintThreshold)
+        else if (movementSpeed <= sprintThreshold)
         {
             // Blend from run to sprint
-            float blendFactor = (walkSpeed - runThreshold) / (sprintThreshold - runThreshold);
+            float blendFactor = (movementSpeed - runThreshold) / (sprintThreshold - runThreshold);
             runWeight = 1f - blendFactor;
             sprintWeight = blendFactor;
         }
@@ -424,7 +431,7 @@ public class PlayerController : AnimatorBrain
         {
             MovementType currentType = GetCurrentMovementType();
             string direction = GetCurrentDirection();
-            Debug.Log($"Speed: {walkSpeed:F1} | Dir: {direction} | Type: {currentType} | Walk: {GetLayerWeight(WALKLAYER):F2} | Run: {GetLayerWeight(RUNLAYER):F2} | Sprint: {GetLayerWeight(SPRINTLAYER):F2}");
+            Debug.Log($"Speed: {movementSpeed:F1} | Dir: {direction} | Type: {currentType} | Walk: {GetLayerWeight(WALKLAYER):F2} | Run: {GetLayerWeight(RUNLAYER):F2} | Sprint: {GetLayerWeight(SPRINTLAYER):F2}");
         }
     }
     
@@ -455,9 +462,9 @@ public class PlayerController : AnimatorBrain
     
     private MovementType GetCurrentMovementType()
     {
-        if (walkSpeed <= walkThreshold) 
+        if (movementSpeed <= walkThreshold) 
             return MovementType.Walk;
-        else if (walkSpeed <= runThreshold) 
+        else if (movementSpeed <= runThreshold) 
             return MovementType.Run;
         else 
             return MovementType.Sprint;
